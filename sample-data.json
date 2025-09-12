@@ -1,0 +1,175 @@
+{
+  "employees": [
+    {
+      "id": "emp_1",
+      "email": "juan.perez@empresa.com",
+      "name": "Juan Pérez",
+      "area": "Ventas",
+      "status": "Finalizado",
+      "shareStatus": "Compartida y confirmada",
+      "finalScore": 85.5
+    },
+    {
+      "id": "emp_2",
+      "email": "maria.garcia@empresa.com",
+      "name": "María García",
+      "area": "Marketing",
+      "status": "Finalizado",
+      "shareStatus": "Compartida y confirmada",
+      "finalScore": 92.3
+    },
+    {
+      "id": "emp_3",
+      "email": "carlos.lopez@empresa.com",
+      "name": "Carlos López",
+      "area": "IT",
+      "status": "En curso",
+      "shareStatus": "Compartida sin confirmar",
+      "finalScore": 78.9
+    },
+    {
+      "id": "emp_4",
+      "email": "ana.martinez@empresa.com",
+      "name": "Ana Martínez",
+      "area": "Recursos Humanos",
+      "status": "Finalizado",
+      "shareStatus": "Compartida y confirmada",
+      "finalScore": 88.7
+    },
+    {
+      "id": "emp_5",
+      "email": "luis.rodriguez@empresa.com",
+      "name": "Luis Rodríguez",
+      "area": "Finanzas",
+      "status": "Finalizado",
+      "shareStatus": "Compartida y confirmada",
+      "finalScore": 91.2
+    }
+  ],
+  "evaluations": [
+    {
+      "id": "eval_auto_1",
+      "evaluatedId": "emp_1",
+      "evaluatedName": "Juan Pérez",
+      "evaluatedArea": "Ventas",
+      "type": "autoevaluacion",
+      "status": "Finalizada",
+      "totalScore": 85.5,
+      "competencies": [
+        {
+          "competencyName": "Compromiso",
+          "averageScore": 87,
+          "questions": [
+            {
+              "questionText": "Demuestra compromiso con los objetivos del equipo",
+              "score": 85,
+              "comment": "Siempre está dispuesto a colaborar"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "eval_desc_1",
+      "evaluatedId": "emp_1",
+      "evaluatedName": "Juan Pérez",
+      "evaluatedArea": "Ventas",
+      "evaluatorName": "Supervisor Ventas",
+      "type": "descendente",
+      "status": "Finalizada",
+      "totalScore": 84,
+      "competencies": []
+    },
+    {
+      "id": "eval_auto_2",
+      "evaluatedId": "emp_2",
+      "evaluatedName": "María García",
+      "evaluatedArea": "Marketing",
+      "type": "autoevaluacion",
+      "status": "Finalizada",
+      "totalScore": 92.3,
+      "competencies": []
+    },
+    {
+      "id": "eval_desc_2",
+      "evaluatedId": "emp_2",
+      "evaluatedName": "María García",
+      "evaluatedArea": "Marketing",
+      "evaluatorName": "Director Marketing",
+      "type": "descendente",
+      "status": "Finalizada",
+      "totalScore": 93,
+      "competencies": []
+    },
+    {
+      "id": "eval_asc_1",
+      "evaluatedId": "emp_2",
+      "evaluatedName": "María García",
+      "evaluatedArea": "Marketing",
+      "evaluatorName": "Analista Marketing",
+      "type": "ascendente",
+      "status": "Finalizada",
+      "totalScore": 91,
+      "competencies": []
+    }
+  ],
+  "competencies": [
+    {
+      "id": "comp_1",
+      "name": "Compromiso",
+      "description": "Nivel de compromiso con la organización y sus objetivos",
+      "questions": []
+    },
+    {
+      "id": "comp_2",
+      "name": "Comunicación",
+      "description": "Habilidades de comunicación efectiva",
+      "questions": []
+    },
+    {
+      "id": "comp_3",
+      "name": "Orientación al Cliente",
+      "description": "Enfoque en satisfacer las necesidades del cliente",
+      "questions": []
+    },
+    {
+      "id": "comp_4",
+      "name": "Colaboración",
+      "description": "Capacidad de trabajar efectivamente en equipo",
+      "questions": []
+    },
+    {
+      "id": "comp_5",
+      "name": "Iniciativa y Autonomía",
+      "description": "Capacidad de tomar iniciativa y trabajar de forma autónoma",
+      "questions": []
+    },
+    {
+      "id": "comp_6",
+      "name": "Orientación a Resultados",
+      "description": "Enfoque en lograr resultados y objetivos",
+      "questions": []
+    },
+    {
+      "id": "comp_7",
+      "name": "Liderazgo",
+      "description": "Habilidades de liderazgo y dirección de equipos",
+      "questions": []
+    }
+  ],
+  "metadata": {
+    "totalEmployees": 5,
+    "totalEvaluations": 5,
+    "evaluationTypes": ["autoevaluacion", "descendente", "ascendente"],
+    "areas": ["Ventas", "Marketing", "IT", "Recursos Humanos", "Finanzas"],
+    "competencyNames": [
+      "Compromiso",
+      "Comunicación", 
+      "Orientación al Cliente",
+      "Colaboración",
+      "Iniciativa y Autonomía",
+      "Orientación a Resultados",
+      "Liderazgo"
+    ]
+  }
+}
