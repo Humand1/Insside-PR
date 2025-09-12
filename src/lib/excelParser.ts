@@ -218,33 +218,68 @@ export class ExcelParser {
     };
 
     for (let i = 0; i < headerRow.length; i++) {
-      const header = String(headerRow[i] || '').toLowerCase();
+      const header = String(headerRow[i] || '').toLowerCase().trim();
 
-      // Mapear nombre del evaluado
-      if ((header.indexOf('nombre') !== -1 && header.indexOf('apellido') !== -1) || 
+      // Mapear nombre del evaluado - más flexible
+      if (mapping.evaluatedName === -1 && (
+          header.indexOf('nombre') !== -1 || 
           header.indexOf('evaluado') !== -1 || 
-          header.indexOf('evaluated') !== -1) {
+          header.indexOf('evaluated') !== -1 ||
+          header.indexOf('empleado') !== -1 ||
+          header.indexOf('employee') !== -1 ||
+          header === 'name' ||
+          (header.indexOf('nombre') !== -1 && header.indexOf('apellido') !== -1)
+      )) {
         mapping.evaluatedName = i;
       }
 
-      // Mapear área
-      if (header.indexOf('area') !== -1 || header.indexOf('department') !== -1) {
+      // Mapear área - más flexible
+      if (mapping.evaluatedArea === -1 && (
+          header.indexOf('area') !== -1 || 
+          header.indexOf('department') !== -1 ||
+          header.indexOf('departamento') !== -1 ||
+          header.indexOf('sector') !== -1 ||
+          header.indexOf('division') !== -1 ||
+          header === 'área'
+      )) {
         mapping.evaluatedArea = i;
       }
 
       // Mapear evaluador (para evaluaciones que no son autoevaluación)
-      if (evaluationType !== 'autoevaluacion' && 
-          (header.indexOf('evaluador') !== -1 || header.indexOf('evaluator') !== -1)) {
+      if (evaluationType !== 'autoevaluacion' && mapping.evaluatorName === undefined && (
+          header.indexOf('evaluador') !== -1 || 
+          header.indexOf('evaluator') !== -1 ||
+          header.indexOf('supervisor') !== -1 ||
+          header.indexOf('manager') !== -1 ||
+          header.indexOf('jefe') !== -1
+      )) {
         mapping.evaluatorName = i;
       }
 
-      // Mapear estado
-      if (header.indexOf('estado') !== -1 || header.indexOf('status') !== -1) {
+      // Mapear estado - más flexible
+      if (mapping.status === -1 && (
+          header.indexOf('estado') !== -1 || 
+          header.indexOf('status') !== -1 ||
+          header.indexOf('situacion') !== -1 ||
+          header.indexOf('situación') !== -1 ||
+          header.indexOf('progreso') !== -1 ||
+          header.indexOf('progress') !== -1
+      )) {
         mapping.status = i;
       }
 
-      // Mapear puntaje total
-      if (header.indexOf('puntaje') !== -1 || header.indexOf('score') !== -1) {
+      // Mapear puntaje total - más flexible
+      if (mapping.totalScore === undefined && (
+          header.indexOf('puntaje') !== -1 || 
+          header.indexOf('score') !== -1 ||
+          header.indexOf('puntuacion') !== -1 ||
+          header.indexOf('puntuación') !== -1 ||
+          header.indexOf('calificacion') !== -1 ||
+          header.indexOf('calificación') !== -1 ||
+          header.indexOf('total') !== -1 ||
+          header.indexOf('promedio') !== -1 ||
+          header.indexOf('average') !== -1
+      )) {
         mapping.totalScore = i;
       }
     }
@@ -321,40 +356,53 @@ export class ExcelParser {
    * Procesa los datos de todas las hojas detectadas
    */
   private processSheetData(structures: SheetStructure[]): ProcessedData {
-    const employees: Employee[] = [];
     const evaluations: Evaluation[] = [];
     const competencies = this.extractUniqueCompetencies(structures);
-    const areas = new Set<string>();
     const evaluationTypes: EvaluationType[] = [];
-
-    // Procesar hoja de usuarios evaluados (resumen)
-    const summarySheet = structures.find(s => 
-      s.name.toLowerCase().indexOf('usuarios') !== -1 || 
-      s.name.toLowerCase().indexOf('evaluados') !== -1 ||
-      s.name.toLowerCase().indexOf('summary') !== -1
-    );
-
-    if (summarySheet && this.workbook) {
-      const summaryData = this.processSummarySheet(summarySheet);
-      employees.push(...summaryData.employees);
-      summaryData.employees.forEach((emp: Employee) => areas.add(emp.area));
-    }
+    const employeeMap = new Map<string, Employee>();
+    const areas = new Set<string>();
 
     // Procesar hojas de evaluaciones
     for (const structure of structures) {
-      if (structure.name.toLowerCase().indexOf('usuarios') === -1 && 
-          structure.name.toLowerCase().indexOf('evaluados') === -1) {
+      if (this.workbook) {
+        const sheetEvaluations = this.processEvaluationSheet(structure);
+        evaluations.push(...sheetEvaluations);
         
-        if (this.workbook) {
-          const sheetEvaluations = this.processEvaluationSheet(structure);
-          evaluations.push(...sheetEvaluations);
-          
-          if (evaluationTypes.indexOf(structure.type) === -1) {
-            evaluationTypes.push(structure.type);
+        if (evaluationTypes.indexOf(structure.type) === -1) {
+          evaluationTypes.push(structure.type);
+        }
+
+        // Extraer empleados únicos de las evaluaciones
+        for (const evaluation of sheetEvaluations) {
+          if (evaluation.evaluatedName && evaluation.evaluatedArea) {
+            const employeeKey = `${evaluation.evaluatedName}_${evaluation.evaluatedArea}`;
+            
+            if (!employeeMap.has(employeeKey)) {
+              const employee: Employee = {
+                id: `emp_${employeeMap.size + 1}`,
+                email: `${evaluation.evaluatedName.toLowerCase().replace(/\s+/g, '.')}@empresa.com`,
+                name: evaluation.evaluatedName,
+                area: evaluation.evaluatedArea,
+                status: evaluation.status === 'Finalizada' ? 'Finalizado' : 'En curso',
+                shareStatus: 'Compartida y confirmada',
+                finalScore: evaluation.totalScore
+              };
+              
+              employeeMap.set(employeeKey, employee);
+              areas.add(evaluation.evaluatedArea);
+            } else {
+              // Actualizar puntaje final si es necesario
+              const existingEmployee = employeeMap.get(employeeKey)!;
+              if (evaluation.totalScore && (!existingEmployee.finalScore || evaluation.totalScore > existingEmployee.finalScore)) {
+                existingEmployee.finalScore = evaluation.totalScore;
+              }
+            }
           }
         }
       }
     }
+
+    const employees = Array.from(employeeMap.values());
 
     const metadata: DataMetadata = {
       totalEmployees: employees.length,
