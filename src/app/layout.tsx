@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
+import { ClientWrapper } from '@/components/ClientWrapper'
 
 export const metadata: Metadata = {
   title: '360° Performance Analytics Dashboard',
@@ -175,7 +176,6 @@ export default function RootLayout({
               Ha ocurrido un error inesperado. Por favor, recarga la página e intenta nuevamente.
             </p>
             <button 
-              onClick={() => window.location.reload()} 
               className="btn-primary"
             >
               Recargar página
