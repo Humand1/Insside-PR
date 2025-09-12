@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -6,7 +6,6 @@ export const metadata: Metadata = {
   description: 'Análisis inteligente de evaluaciones de desempeño 360° con insights avanzados y visualizaciones interactivas',
   keywords: ['evaluación 360', 'performance', 'analytics', 'dashboard', 'recursos humanos', 'talento'],
   authors: [{ name: 'Performance Analytics Team' }],
-  viewport: 'width=device-width, initial-scale=1',
   robots: 'index, follow',
   openGraph: {
     title: '360° Performance Analytics Dashboard',
@@ -19,6 +18,11 @@ export const metadata: Metadata = {
     title: '360° Performance Analytics Dashboard',
     description: 'Análisis inteligente de evaluaciones de desempeño 360°',
   },
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
 }
 
 export default function RootLayout({
