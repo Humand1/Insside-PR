@@ -11,13 +11,82 @@ import {
   ProcessingResult,
   ValidationError,
   DataMetadata,
-  Competency
+  Competency,
+  UserSegmentation,
+  SegmentedEmployee
 } from './types';
 
 export class ExcelParser {
   private workbook: XLSX.WorkBook | null = null;
   private errors: ValidationError[] = [];
   private warnings: ValidationError[] = [];
+  private userSegmentations: Map<string, UserSegmentation> = new Map();
+
+  /**
+   * Extrae el nombre del empleado priorizando nombre real sobre email
+   * Si hay segmentaciones disponibles, las usa para obtener información adicional
+   */
+  private extractEmployeeName(emailOrName: string): { name: string; email: string; segmentation?: UserSegmentation } {
+    const input = String(emailOrName || '').trim();
+    
+    if (!input) {
+      return { name: 'Sin nombre', email: 'sin@email.com' };
+    }
+    
+    // Buscar en las segmentaciones primero (por email exacto)
+    let segmentation = this.userSegmentations.get(input);
+    
+    // Si no se encuentra por email exacto, buscar por nombre
+    if (!segmentation) {
+      for (const [key, userSeg] of this.userSegmentations.entries()) {
+        if (userSeg.name === input) {
+          segmentation = userSeg;
+          break;
+        }
+      }
+    }
+    
+    if (segmentation) {
+      return {
+        name: segmentation.name,
+        email: segmentation.id,
+        segmentation
+      };
+    }
+    
+    // Si es un email, intentar extraer el nombre
+    if (input.includes('@')) {
+      const emailParts = input.split('@')[0];
+      
+      // Convertir de formato email a nombre (ej: "juan.perez" -> "Juan Perez")
+      const nameParts = emailParts.split(/[._-]/);
+      const formattedName = nameParts
+        .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+        .join(' ');
+      
+      return {
+        name: formattedName,
+        email: input
+      };
+    }
+    
+    // Si no es email, asumir que es nombre
+    return {
+      name: input,
+      email: input.toLowerCase().replace(/\s+/g, '.') + '@empresa.com'
+    };
+  }
+
+  /**
+   * Integra las segmentaciones de usuarios al parser
+   */
+  integrateUserSegmentations(segmentations: UserSegmentation[]): void {
+    this.userSegmentations.clear();
+    segmentations.forEach(user => {
+      this.userSegmentations.set(user.id, user);
+    });
+    console.log('Segmentaciones integradas:', Array.from(this.userSegmentations.entries()));
+  }
 
   /**
    * Procesa un archivo Excel y extrae los datos de evaluación 360°
@@ -100,10 +169,20 @@ export class ExcelParser {
       // Convertir hoja a JSON para análisis
       const data = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
       
-      if (data.length < 2) {
+      if (data.length < 1) {
         this.warnings.push({
           field: sheetName,
-          message: `La hoja "${sheetName}" no tiene suficientes datos`,
+          message: `La hoja "${sheetName}" está vacía`,
+          severity: 'warning'
+        });
+        return null;
+      }
+      
+      // Si solo tiene encabezados pero no datos, es una advertencia menor
+      if (data.length === 1) {
+        this.warnings.push({
+          field: sheetName,
+          message: `La hoja "${sheetName}" solo tiene encabezados, no hay datos de evaluación`,
           severity: 'warning'
         });
         return null;
@@ -113,11 +192,20 @@ export class ExcelParser {
       const evaluationType = this.detectEvaluationType(sheetName);
       
       if (!evaluationType) {
-        this.warnings.push({
-          field: sheetName,
-          message: `No se pudo determinar el tipo de evaluación para la hoja "${sheetName}"`,
-          severity: 'warning'
-        });
+        // Solo generar advertencia si no es una hoja de resumen/usuarios
+        const name = sheetName.toLowerCase();
+        const isSummarySheet = name.indexOf('usuarios') !== -1 || name.indexOf('empleados') !== -1 || 
+                              name.indexOf('users') !== -1 || name.indexOf('employees') !== -1 ||
+                              name.indexOf('lista') !== -1 || name.indexOf('list') !== -1 ||
+                              name.indexOf('resumen') !== -1 || name.indexOf('summary') !== -1;
+        
+        if (!isSummarySheet) {
+          this.warnings.push({
+            field: sheetName,
+            message: `No se pudo determinar el tipo de evaluación para la hoja "${sheetName}"`,
+            severity: 'warning'
+          });
+        }
         return null;
       }
 
@@ -162,16 +250,32 @@ export class ExcelParser {
   private detectEvaluationType(sheetName: string): EvaluationType | null {
     const name = sheetName.toLowerCase();
     
-    if (name.indexOf('autoevaluac') !== -1 || name.indexOf('self') !== -1) {
+    // Detectar hojas de usuarios/empleados (no son evaluaciones) - no generar advertencias
+    if (name.indexOf('usuarios') !== -1 || name.indexOf('empleados') !== -1 || 
+        name.indexOf('users') !== -1 || name.indexOf('employees') !== -1 ||
+        name.indexOf('lista') !== -1 || name.indexOf('list') !== -1 ||
+        name.indexOf('resumen') !== -1 || name.indexOf('summary') !== -1) {
+      return null; // No es una hoja de evaluación, no generar advertencia
+    }
+    
+    // Detectar tipos específicos de evaluación 360°
+    if (name.indexOf('autoevaluacion') !== -1 || name.indexOf('autoevaluación') !== -1 || 
+        name.indexOf('autoevaluac') !== -1 || name.indexOf('self') !== -1) {
       return 'autoevaluacion';
     }
-    if (name.indexOf('descendente') !== -1 || name.indexOf('downward') !== -1 || name.indexOf('manager') !== -1) {
+    
+    if (name.indexOf('evaluacion descendente') !== -1 || name.indexOf('evaluación descendente') !== -1 ||
+        name.indexOf('descendente') !== -1 || name.indexOf('downward') !== -1 || name.indexOf('manager') !== -1) {
       return 'descendente';
     }
-    if (name.indexOf('ascendente') !== -1 || name.indexOf('upward') !== -1 || name.indexOf('subordinate') !== -1) {
+    
+    if (name.indexOf('evaluacion ascendente') !== -1 || name.indexOf('evaluación ascendente') !== -1 ||
+        name.indexOf('ascendente') !== -1 || name.indexOf('upward') !== -1 || name.indexOf('subordinate') !== -1) {
       return 'ascendente';
     }
-    if (name.indexOf('pares') !== -1 || name.indexOf('peer') !== -1 || name.indexOf('360') !== -1) {
+    
+    if (name.indexOf('evaluacion de pares') !== -1 || name.indexOf('evaluación de pares') !== -1 ||
+        name.indexOf('pares') !== -1 || name.indexOf('peer') !== -1 || name.indexOf('360') !== -1) {
       return 'pares';
     }
     
@@ -378,18 +482,21 @@ export class ExcelParser {
             const employeeKey = `${evaluation.evaluatedName}_${evaluation.evaluatedArea}`;
             
             if (!employeeMap.has(employeeKey)) {
+              const { name, email, segmentation } = this.extractEmployeeName(evaluation.evaluatedName);
+              
+              // Usar segmentación si está disponible, sino usar datos de evaluación
               const employee: Employee = {
                 id: `emp_${employeeMap.size + 1}`,
-                email: `${evaluation.evaluatedName.toLowerCase().replace(/\s+/g, '.')}@empresa.com`,
-                name: evaluation.evaluatedName,
-                area: evaluation.evaluatedArea,
+                email: email,
+                name: name,
+                area: segmentation?.area || evaluation.evaluatedArea,
                 status: evaluation.status === 'Finalizada' ? 'Finalizado' : 'En curso',
                 shareStatus: 'Compartida y confirmada',
                 finalScore: evaluation.totalScore
               };
               
               employeeMap.set(employeeKey, employee);
-              areas.add(evaluation.evaluatedArea);
+              areas.add(employee.area);
             } else {
               // Actualizar puntaje final si es necesario
               const existingEmployee = employeeMap.get(employeeKey)!;
@@ -453,10 +560,13 @@ export class ExcelParser {
       const row = data[i];
       if (!row || row.length === 0) continue;
 
+      const emailOrName = String(row[structure.columns.evaluatedName] || row[0] || '');
+      const { name, email } = this.extractEmployeeName(emailOrName);
+      
       const employee: Employee = {
         id: `emp_${i}`,
-        email: String(row[0] || ''),
-        name: String(row[structure.columns.evaluatedName] || ''),
+        email: email,
+        name: name,
         area: String(row[structure.columns.evaluatedArea] || ''),
         status: String(row[structure.columns.status] || '') as 'En curso' | 'Finalizado',
         shareStatus: 'Compartida y confirmada',
@@ -486,10 +596,13 @@ export class ExcelParser {
       const row = data[i];
       if (!row || row.length === 0) continue;
 
+      const evaluatedEmailOrName = String(row[structure.columns.evaluatedName] || row[0] || '');
+      const { name: evaluatedName } = this.extractEmployeeName(evaluatedEmailOrName);
+      
       const evaluation: Evaluation = {
         id: `eval_${structure.type}_${i}`,
         evaluatedId: String(row[0] || ''),
-        evaluatedName: String(row[structure.columns.evaluatedName] || ''),
+        evaluatedName: evaluatedName,
         evaluatedArea: String(row[structure.columns.evaluatedArea] || ''),
         evaluatorName: structure.columns.evaluatorName !== undefined ? 
           String(row[structure.columns.evaluatorName] || '') : undefined,

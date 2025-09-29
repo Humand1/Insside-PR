@@ -233,3 +233,20 @@ export interface ProcessingResult {
   errors: ValidationError[];
   warnings: ValidationError[];
 }
+
+// Tipos para segmentaciones de usuarios
+export interface UserSegmentation {
+  id: string; // User ID or email
+  name: string;
+  area?: string;
+  subArea?: string;
+  location?: string;
+  // Add other segmentation fields as needed
+}
+
+export interface SegmentedEmployee extends Employee {
+  area?: string;
+  subArea?: string;
+  location?: string;
+  // Add other segmentation fields as needed
+}

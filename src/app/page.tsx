@@ -1,61 +1,35 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { FileUpload } from '@/components/FileUpload'
+import DualFileUpload from '@/components/DualFileUpload'
 import { Dashboard } from '@/components/Dashboard'
-import { ProcessedData, ProcessingResult } from '@/lib/types'
-import { createExcelParser } from '@/lib/excelParser'
-import { createAnalytics } from '@/lib/analytics'
+import { ProcessedData, UserSegmentation } from '@/lib/types'
 
 export default function HomePage() {
   const [processedData, setProcessedData] = useState<ProcessedData | null>(null)
+  const [userSegmentations, setUserSegmentations] = useState<UserSegmentation[]>([])
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const handleFileUpload = useCallback(async (file: File) => {
-    setIsProcessing(true)
-    setError(null)
+  const handleDataProcessed = useCallback((data: ProcessedData, segmentations: UserSegmentation[]) => {
+    setProcessedData(data)
+    setUserSegmentations(segmentations)
+    showToast('success', 'Archivos procesados exitosamente')
+  }, [])
 
-    try {
-      // Mostrar overlay de carga
-      const loadingOverlay = document.getElementById('loading-overlay')
-      if (loadingOverlay) {
-        loadingOverlay.classList.remove('hidden')
-      }
+  const handleError = useCallback((errorMessage: string) => {
+    setError(errorMessage)
+    showToast('error', errorMessage)
+  }, [])
 
-      // Procesar archivo Excel
-      const parser = createExcelParser()
-      const result: ProcessingResult = await parser.processFile(file)
-
-      if (!result.success || !result.data) {
-        throw new Error(result.errors[0]?.message || 'Error al procesar el archivo')
-      }
-
-      // Mostrar warnings si existen
-      if (result.warnings.length > 0) {
-        showToast('warning', `Se procesó el archivo con ${result.warnings.length} advertencias`)
-      }
-
-      setProcessedData(result.data)
-      showToast('success', 'Archivo procesado exitosamente')
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Error desconocido al procesar el archivo'
-      setError(errorMessage)
-      showToast('error', errorMessage)
-    } finally {
-      setIsProcessing(false)
-      
-      // Ocultar overlay de carga
-      const loadingOverlay = document.getElementById('loading-overlay')
-      if (loadingOverlay) {
-        loadingOverlay.classList.add('hidden')
-      }
-    }
+  const handleWarning = useCallback((warningMessage: string) => {
+    console.log('⚠️ Advertencia:', warningMessage)
+    showToast('warning', warningMessage)
   }, [])
 
   const handleReset = useCallback(() => {
     setProcessedData(null)
+    setUserSegmentations([])
     setError(null)
   }, [])
 
@@ -168,15 +142,15 @@ export default function HomePage() {
               Comienza tu análisis
             </h2>
             <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
-              Sube tu archivo Excel de evaluaciones 360° y obtén análisis detallados automáticamente. 
-              Nuestro sistema detecta la estructura y genera insights valiosos.
+              Sube tu archivo Excel de evaluaciones 360° y el archivo de segmentaciones de usuarios para obtener análisis detallados automáticamente. 
+              Nuestro sistema detecta la estructura y genera insights valiosos con filtros dinámicos.
             </p>
           </div>
 
-          <FileUpload 
-            onFileUpload={handleFileUpload}
-            isProcessing={isProcessing}
-            error={error}
+          <DualFileUpload 
+            onDataProcessed={handleDataProcessed}
+            onError={handleError}
+            onWarning={handleWarning}
           />
 
           {/* Features Section */}
@@ -234,29 +208,29 @@ export default function HomePage() {
                 <div className="w-12 h-12 bg-primary-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
                   1
                 </div>
-                <h4 className="font-semibold text-gray-900 mb-2">Sube tu archivo</h4>
+                <h4 className="font-semibold text-gray-900 mb-2">Sube evaluaciones</h4>
                 <p className="text-sm text-gray-600">Arrastra tu Excel de evaluaciones 360°</p>
               </div>
               <div className="text-center">
                 <div className="w-12 h-12 bg-primary-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
                   2
                 </div>
-                <h4 className="font-semibold text-gray-900 mb-2">Procesamiento IA</h4>
-                <p className="text-sm text-gray-600">Detectamos automáticamente la estructura</p>
+                <h4 className="font-semibold text-gray-900 mb-2">Sube segmentaciones</h4>
+                <p className="text-sm text-gray-600">Arrastra tu Excel de usuarios con segmentaciones</p>
               </div>
               <div className="text-center">
                 <div className="w-12 h-12 bg-primary-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
                   3
                 </div>
-                <h4 className="font-semibold text-gray-900 mb-2">Análisis avanzado</h4>
-                <p className="text-sm text-gray-600">Generamos métricas e insights valiosos</p>
+                <h4 className="font-semibold text-gray-900 mb-2">Procesamiento IA</h4>
+                <p className="text-sm text-gray-600">Mapeamos datos y generamos insights</p>
               </div>
               <div className="text-center">
                 <div className="w-12 h-12 bg-primary-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 text-xl font-bold">
                   4
                 </div>
                 <h4 className="font-semibold text-gray-900 mb-2">Dashboard interactivo</h4>
-                <p className="text-sm text-gray-600">Explora resultados y exporta reportes</p>
+                <p className="text-sm text-gray-600">Explora con filtros dinámicos y exporta</p>
               </div>
             </div>
           </div>
@@ -264,6 +238,7 @@ export default function HomePage() {
       ) : (
         <Dashboard 
           data={processedData} 
+          segmentations={userSegmentations}
           onReset={handleReset}
         />
       )}
