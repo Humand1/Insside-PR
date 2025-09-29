@@ -75,7 +75,8 @@ export default function DualFileUpload({ onDataProcessed, onError, onWarning }: 
 
       // Mostrar advertencias
       [...finalResult.warnings, ...segmentationResult.warnings].forEach(warning => {
-        onWarning(warning.message);
+        const message = typeof warning === 'string' ? warning : warning.message;
+        onWarning(message);
       });
 
       setProcessingStatus('Completado');

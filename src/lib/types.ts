@@ -245,7 +245,6 @@ export interface UserSegmentation {
 }
 
 export interface SegmentedEmployee extends Employee {
-  area?: string;
   subArea?: string;
   location?: string;
   // Add other segmentation fields as needed

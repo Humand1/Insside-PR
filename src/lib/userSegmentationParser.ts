@@ -95,11 +95,11 @@ export class UserSegmentationParser {
       }
 
       // Detectar estructura de la hoja
-      const structure = this.analyzeSheetStructure(jsonData, sheetName);
+      const structure = this.analyzeSheetStructure(jsonData as any[][], sheetName);
       
       if (structure.isValid) {
         // Procesar datos de usuarios
-        const users = this.extractUsers(jsonData, structure);
+        const users = this.extractUsers(jsonData as any[][], structure);
         
         // Agregar usuarios al mapa
         users.forEach(user => {
@@ -317,17 +317,17 @@ export class UserSegmentationParser {
       switch (segmentationType.toLowerCase()) {
         case 'area':
         case 'área':
-          value = user.area;
+          value = user.area || '';
           break;
         case 'subarea':
         case 'sub área':
         case 'sub-area':
-          value = user.subArea;
+          value = user.subArea || '';
           break;
         case 'ubicacion':
         case 'ubicación':
         case 'location':
-          value = user.location;
+          value = user.location || '';
           break;
       }
       

@@ -15,6 +15,10 @@ export class PDFExporter {
    * Exporta el dashboard completo como PDF (captura visual)
    */
   async exportDashboard(): Promise<void> {
+    // Declarar variables fuera del try para que estén disponibles en el catch
+    let actionButtons: NodeListOf<HTMLButtonElement> | undefined
+    let originalStyles: string[] = []
+    
     try {
       // Mostrar loading
       this.showLoading('Capturando dashboard...')
@@ -35,8 +39,8 @@ export class PDFExporter {
       })
 
       // Ocultar botones de acción y filtros completos antes de la captura
-      const actionButtons = dashboardElement.querySelectorAll('button')
-      const originalStyles: string[] = []
+      actionButtons = dashboardElement.querySelectorAll('button')
+      originalStyles = []
       
       actionButtons.forEach((button, index) => {
         originalStyles[index] = button.style.display
@@ -95,8 +99,9 @@ export class PDFExporter {
         foreignObjectRendering: false, // Mantener configuración estable
         ignoreElements: (element) => {
           // Ignorar elementos que pueden causar problemas
+          const htmlElement = element as HTMLElement;
           return element.classList.contains('hidden') || 
-                 element.style.display === 'none' ||
+                 htmlElement.style.display === 'none' ||
                  element.tagName === 'SCRIPT' ||
                  element.tagName === 'STYLE' ||
                  element.classList.contains('animate-spin') // Ignorar spinners
@@ -205,7 +210,7 @@ export class PDFExporter {
 
     } catch (error) {
       // Restaurar botones y filtros en caso de error
-      if (typeof actionButtons !== 'undefined') {
+      if (actionButtons) {
         actionButtons.forEach((button, index) => {
           button.style.display = originalStyles[index] || ''
         })
